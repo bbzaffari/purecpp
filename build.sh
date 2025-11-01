@@ -4,6 +4,10 @@ set -euo pipefail
 
 cd src/
 
+#================= COLORS =================
+GREEN='\033[0;32m'
+RESET='\033[0m'
+
 #-----------------------------------------
 #================= LOGGING ===============
 #-----------------------------------------
@@ -14,16 +18,15 @@ SEGMENT=$'===========================================================\n'
 
 #-----------------------------------------
 printf "$SEGMENT$SEGMENT$SEGMENT"
-printf "              Begin $TAG$LINE_BRK"
-printf "$SEGMENT"
-printf "$LINE_BRK"
+printf "         Begin: $TAG$LINE_BRK"
+printf "$SEGMENT$LINE_BRK"
 #-----------------------------------------
 
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 # Smart core splitter for parallel builds
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 
 cores=$(nproc)
 
@@ -33,17 +36,16 @@ else
     half=1
 fi
 printf "$LINE_BRK"
-echo "[INFO] Detected $cores cores, using $half for parallel build."
-printf "$LINE_BRK"
-printf "$SEGMENT"
-printf "$SEGMENT"
+echo -e "$GREEN[Core splitter] Detected $cores cores, using $half for parallel build. "
+printf "$LINE_BRK$SEGMENT$SEGMENT"
+
 #-----------------------------------------
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 # Conan
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 #-----------------------------------------
-printf "              Begin [CONAN]$LINE_BRK"
+printf "         Begin: [CONAN]$LINE_BRK"
 printf "$SEGMENT"
 printf "$LINE_BRK"
 #-----------------------------------------
@@ -55,23 +57,19 @@ conan install . --build=missing -c tools.build:jobs=$half
 # conan lock create . --build=missing -c tools.build:jobs=$half
 
 #-----------------------------------------
-#================= ENDING ================
-#-----------------------------------------
 printf "$SEGMENT"
-printf "             Finish [CONAN]\n"
+printf "          [CONAN] Finished \n"
 printf "$SEGMENT$SEGMENT$SEGMENT\n"
-#-----------------------------------------
+#================= ENDING ================
 
-
-
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 # Build
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 #-----------------------------------------
-printf "              Begin [Build]$LINE_BRK"
-printf "$SEGMENT"
-printf "$LINE_BRK"
+printf "            Begin: [Build]$LINE_BRK"
+printf "$SEGMENT$LINE_BRK"
 #-----------------------------------------
+START_TIME=$(date +%s)
 
 cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
@@ -84,33 +82,36 @@ cmake -DCMAKE_POLICY_DEFAULT_CMP0091=NEW \
     -B "$(pwd)/build/Release" \
     -G "Unix Makefiles"
 
-cmake --build "$(pwd)/build/Release" --parallel $half
-# cmake --build --preset conan-release --parallel $(nproc) --target RagPUREAI 
+cmake --build "$(pwd)/build/Release" --parallel "$half" #--target RagPUREAI 
 
-#-----------------------------------------
-#================= ENDING ================
+END_TIME=$(date +%s)
+ELAPSED_TIME=$((END_TIME - START_TIME))
+#---------------- LOG --------------------
+echo -e "$GREEN"
+echo    "============================================================"
+echo    "      Total build time: ${ELAPSED_TIME} s"
+echo -e "============================================================$RESET"
+
 #-----------------------------------------
 printf "$SEGMENT"
-printf "             Finish [Build]\n"
+printf "       [Build] Finished \n"
 printf "$SEGMENT$SEGMENT$SEGMENT\n"
-#-----------------------------------------
+#================= ENDING ================
 
 
-
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 # Sending to Sandbox
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────
 
-printf "[Last Step] Sending to Sandbox \n"
+printf "$GREEN[Last Step] Sending to Sandbox \n"
+echo -e "$RESET"
 
 rm -f ../Sandbox/*.so
 
 cp ./build/Release/RagPUREAI.cpython*.so ../Sandbox/
 
 #-----------------------------------------
-#================= ENDING ================
-#-----------------------------------------
 printf "$SEGMENT"
-printf "             Finish $TAG\n"
+printf "          $TAG Finished \n"
 printf "$SEGMENT$SEGMENT$SEGMENT\n"
-#-----------------------------------------
+#================= ENDING ================
